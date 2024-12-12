@@ -39,5 +39,9 @@ Follow these steps to run the app on your local machine:
 
 This will start the app at http://localhost:3000 OR http://localhost:5173 (Vite's default port) in your browser.
 
+## Link to Deployed App
+
+You can access the deployed app here:  
+[Deployed App on Netlify](https://calendar-app-event.netlify.app/)
 
 
