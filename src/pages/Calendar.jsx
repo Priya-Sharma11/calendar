@@ -9,7 +9,11 @@ const Calendar = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [events, setEvents] = useState({});
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState({
+    date: new Date().getDate(),
+    month: new Date().getMonth(),
+    year: new Date().getFullYear(),
+  });
   const [eventDetails, setEventDetails] = useState({ name: '', startTime: '', endTime: '', description: '' });
   const [editingIndex, setEditingIndex] = useState(null);
 
@@ -18,13 +22,18 @@ const Calendar = () => {
 
   // Load events from localStorage on component mount
   useEffect(() => {
-    const storedEvents = JSON.parse(localStorage.getItem('events')) || {};
-    setEvents(storedEvents);
+    const storedEvents = localStorage.getItem('events');
+    if (storedEvents) {
+      const parsedEvents = JSON.parse(storedEvents);
+      setEvents(parsedEvents);
+    }
   }, []);
 
   // Save events to localStorage whenever events state changes
   useEffect(() => {
-    localStorage.setItem('events', JSON.stringify(events));
+    if (Object.keys(events).length > 0) { // Only save if there are events
+      localStorage.setItem('events', JSON.stringify(events));
+    }
   }, [events]);
 
   const handleMonthChange = (direction) => {
@@ -41,54 +50,85 @@ const Calendar = () => {
 
     setCurrentMonth(newMonth);
     setCurrentYear(newYear);
-    setSelectedDate(null);
+
+    // Keep the selected date within the valid range of days in the new month
+    const daysInNewMonth = getDaysInMonth(newMonth, newYear);
+    if (selectedDate.date > daysInNewMonth) {
+      setSelectedDate({ ...selectedDate, date: daysInNewMonth });
+    } else {
+      setSelectedDate({ ...selectedDate, month: newMonth, year: newYear });
+    }
   };
 
   const handleAddEvent = () => {
     if (!eventDetails.name || !eventDetails.startTime || !eventDetails.endTime) {
-      alert("Please fill in all fields.");
+      alert('Please fill in all fields.');
       return;
     }
-
-    // Generate event key
-    const eventKey = `${currentYear}-${currentMonth}-${selectedDate}`;
+  
+    if (eventDetails.startTime >= eventDetails.endTime) {
+      alert('End time must be after the start time.');
+      return;
+    }
+  
+    const eventKey = `${selectedDate.year}-${selectedDate.month}-${selectedDate.date}`;
+    
+    // Check for overlapping events
+    const existingEvents = events[eventKey] || [];
+    
+    const isOverlapping = existingEvents.some((existingEvent) => {
+      const existingStart = new Date(`${selectedDate.year}-${selectedDate.month + 1}-${selectedDate.date}T${existingEvent.startTime}`);
+      const existingEnd = new Date(`${selectedDate.year}-${selectedDate.month + 1}-${selectedDate.date}T${existingEvent.endTime}`);
+      const newStart = new Date(`${selectedDate.year}-${selectedDate.month + 1}-${selectedDate.date}T${eventDetails.startTime}`);
+      const newEnd = new Date(`${selectedDate.year}-${selectedDate.month + 1}-${selectedDate.date}T${eventDetails.endTime}`);
+      
+      // Check if the new event overlaps with any existing event
+      return (newStart < existingEnd && newEnd > existingStart);
+    });
+  
+    if (isOverlapping) {
+      alert('The event overlaps with an existing event. Please choose a different time.');
+      return;
+    }
+  
+    // Proceed to add the event
     const updatedEvents = { ...events };
-
-    // If the event key doesn't exist, create an empty array for that date
+  
     if (!updatedEvents[eventKey]) {
       updatedEvents[eventKey] = [];
     }
-
-    // Add or update event
+  
     const newEvent = { ...eventDetails };
-
+  
     if (editingIndex !== null) {
       updatedEvents[eventKey][editingIndex] = newEvent;
     } else {
       updatedEvents[eventKey].push(newEvent);
     }
-
-    // Update state and localStorage
+  
     setEvents(updatedEvents);
     setEventDetails({ name: '', startTime: '', endTime: '', description: '' });
     setEditingIndex(null);
-
-    // Debugging: Log the updated events to check if the event is being added
-    console.log("Updated Events:", updatedEvents);
   };
+  
 
   const days = getDaysInMonth(currentMonth, currentYear);
+
+  const getEventsForSelectedDate = () => {
+    const eventKey = `${selectedDate.year}-${selectedDate.month}-${selectedDate.date}`;
+    return events[eventKey] || [];
+  };
 
   return (
     <div className="flex h-screen">
       <div className="flex-grow p-6">
         {/* Calendar Header */}
-        <CalendarHeader 
-          currentMonth={currentMonth} 
-          currentYear={currentYear} 
-          handleMonthChange={handleMonthChange} 
+        <CalendarHeader
+          currentMonth={currentMonth}
+          currentYear={currentYear}
+          handleMonthChange={handleMonthChange}
         />
-        
+
         {/* Days Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
           {days.map((day, index) => (
@@ -107,24 +147,27 @@ const Calendar = () => {
 
         {/* Event Form */}
         {selectedDate && (
-          <EventForm
-            eventDetails={eventDetails}
-            setEventDetails={setEventDetails}
-            handleAddEvent={handleAddEvent}
-            editingIndex={editingIndex}
-            setEditingIndex={setEditingIndex}
-          />
+         <EventForm
+         eventDetails={eventDetails}
+         setEventDetails={setEventDetails}
+         handleAddEvent={handleAddEvent}
+         editingIndex={editingIndex}
+         setEditingIndex={setEditingIndex}
+         eventsForSelectedDate={getEventsForSelectedDate()} // Pass filtered events
+         setEvents={setEvents}
+       />
+       
         )}
       </div>
 
       {/* Event List */}
-      <div className="w-1/4 bg-gray-100 p-4 border-l">
-        <EventList 
-          selectedDate={selectedDate} 
-          events={events} 
-          setEventDetails={setEventDetails} 
-          setEditingIndex={setEditingIndex} 
-          setEvents={setEvents} 
+      <div className="w-2/4 bg-gray-100 p-8 border-l">
+        <EventList
+          selectedDate={selectedDate}
+          events={events}
+          setEventDetails={setEventDetails}
+          setEditingIndex={setEditingIndex}
+          setEvents={setEvents}
         />
       </div>
     </div>

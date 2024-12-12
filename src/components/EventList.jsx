@@ -1,8 +1,7 @@
 import React from 'react';
 
-
 const EventList = ({ selectedDate, events, setEventDetails, setEditingIndex, setEvents }) => {
-  const selectedDateEventsKey = `${new Date().getFullYear()}-${new Date().getMonth()}-${selectedDate}`;
+  const selectedDateEventsKey = `${selectedDate.year}-${selectedDate.month}-${selectedDate.date}`;
   const selectedDateEvents = events[selectedDateEventsKey] || [];
 
   const handleDeleteEvent = (index) => {
@@ -15,7 +14,7 @@ const EventList = ({ selectedDate, events, setEventDetails, setEditingIndex, set
 
   return (
     <div>
-      <h3 className="text-xl font-semibold mb-4">Events</h3>
+      <h3 className="text-xl font-semibold mb-4">Events </h3>
       {selectedDateEvents.length > 0 ? (
         <ul>
           {selectedDateEvents.map((event, idx) => (
@@ -29,7 +28,7 @@ const EventList = ({ selectedDate, events, setEventDetails, setEditingIndex, set
                     setEventDetails(event);
                     setEditingIndex(idx);
                   }}
-                  className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                  className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 mr-4"
                 >
                   Edit
                 </button>
